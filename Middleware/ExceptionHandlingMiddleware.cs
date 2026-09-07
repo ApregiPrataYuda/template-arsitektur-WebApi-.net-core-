@@ -15,23 +15,28 @@ public class ExceptionHandlingMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+   public async Task InvokeAsync(HttpContext context)
+{
+    try
     {
-        try
-        {
-            await _next(context);
-        }
-        catch (DuplicateDataException ex)
-        {
-            _logger.LogWarning(ex, "Duplicate data error");
-            await WriteErrorResponse(context, HttpStatusCode.BadRequest, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled exception");
-            await WriteErrorResponse(context, HttpStatusCode.InternalServerError, "Terjadi kesalahan pada server.");
-        }
+        await _next(context);
     }
+    catch (DuplicateDataException ex)
+    {
+        _logger.LogWarning(ex, "Duplicate data error");
+        await WriteErrorResponse(context, HttpStatusCode.BadRequest, ex.Message);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        _logger.LogWarning(ex, "Unauthorized access");
+        await WriteErrorResponse(context, HttpStatusCode.Unauthorized, ex.Message);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Unhandled exception");
+        await WriteErrorResponse(context, HttpStatusCode.InternalServerError, "Terjadi kesalahan pada server.");
+    }
+}
 
     private static async Task WriteErrorResponse(HttpContext context, HttpStatusCode statusCode, string message)
     {
@@ -41,4 +46,6 @@ public class ExceptionHandlingMiddleware
         var response = new { error = message };
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
+
+    
 }

@@ -121,3 +121,14 @@ C:\project_net\appOne\bin\Debug\net10.0\tr\Microsoft.CodeAnalysis.Workspaces.MSB
 C:\project_net\appOne\bin\Debug\net10.0\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\project_net\appOne\bin\Debug\net10.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\project_net\appOne\bin\Debug\net10.0\EFCore.NamingConventions.dll
+C:\project_net\appOne\obj\Debug\net10.0\appOne.sourcelink.json
+C:\project_net\appOne\bin\Debug\net10.0\BCrypt-Net-Next.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.Bcl.Cryptography.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.IdentityModel.Abstractions.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.IdentityModel.Logging.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\project_net\appOne\bin\Debug\net10.0\Microsoft.IdentityModel.Tokens.dll
+C:\project_net\appOne\bin\Debug\net10.0\System.IdentityModel.Tokens.Jwt.dll

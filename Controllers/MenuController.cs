@@ -9,11 +9,11 @@ namespace appOne.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class RolesController : ControllerBase
+public class MenuController : ControllerBase
 {
-    private readonly IRoleService _service;
+    private readonly IMenuService _service;
 
-    public RolesController(IRoleService service)
+    public MenuController(IMenuService service)
     {
         _service = service;
     }
@@ -34,14 +34,14 @@ public class RolesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(RoleCreateDto dto)
+    public async Task<IActionResult> Create(MenuCreateDto dto)
     {
         var result = await _service.CreateAsync(dto);
-        return CreatedAtAction(nameof(GetById), new { id = result.IdRole }, result);
+        return CreatedAtAction(nameof(GetById), new { id = result.IdMenu }, result);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, RoleUpdateDto dto)
+    public async Task<IActionResult> Update(int id, MenuUpdateDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
         return result == null ? NotFound() : Ok(result);
