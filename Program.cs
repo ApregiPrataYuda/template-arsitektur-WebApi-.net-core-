@@ -16,8 +16,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 
-// Mendaftarkan layanan untuk generate skema OpenAPI (dokumentasi endpoint otomatis)
-builder.Services.AddOpenApi();
+// Mendaftarkan layanan untuk generate skema OpenAPI (dokumentasi endpoint otomatis) sekarang pake swagger
+// builder.Services.AddOpenApi();
+builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+
 
 // Mendaftarkan AppDbContext ke DI Container, supaya bisa "disuntikkan" (inject)
 // ke Service manapun yang butuh akses database.
@@ -94,10 +100,21 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IAuthService, AuthService>();   // service untuk login & register JWT
+builder.Services.AddScoped<IAppSettingService, AppSettingService>();
+
+
 
 // Setelah semua service didaftarkan, bangun aplikasi (app) dari builder.
 // Setelah baris ini, tidak bisa lagi menambah service baru ke builder.Services.
 var app = builder.Build();
+
+// untuk swagger
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 // Middleware pertama dalam pipeline: menangkap semua exception dari middleware/Controller
 // di bawahnya, supaya error selalu balik sebagai JSON yang rapi, bukan stack trace mentah.
