@@ -8,22 +8,25 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;    // AddJwtBearer, JwtBear
 using Microsoft.IdentityModel.Tokens;                  // TokenValidationParameters, SymmetricSecurityKey
 using System.Text;                                     // Encoding.UTF8
 using System.Text.Json;                                // JsonSerializer, dipakai di custom Events di bawah
+using Microsoft.AspNetCore.Mvc;
+
 
 // Titik masuk aplikasi: builder dipakai untuk mendaftarkan semua service
 // sebelum aplikasi benar-benar dibuat/dijalankan.
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// ===== Add services to the container =====
 
-// Mendaftarkan layanan untuk generate skema OpenAPI (dokumentasi endpoint otomatis) sekarang pake swagger
-// builder.Services.AddOpenApi();
+// Mendaftarkan dukungan Controller (MVC-style routing, dipakai oleh semua file di folder Controllers/).
+// Catatan: sebelumnya dipanggil 2x (duplikat), sekarang cukup sekali di sini.
 builder.Services.AddControllers();
 
+// Mendaftarkan Endpoints API Explorer, dibutuhkan oleh Swagger untuk membaca metadata endpoint.
 builder.Services.AddEndpointsApiExplorer();
+
+// Mendaftarkan generator dokumentasi Swagger (menggantikan AddOpenApi() bawaan template,
+// karena project ini pakai Swagger, bukan OpenAPI minimal API bawaan .NET).
 builder.Services.AddSwaggerGen();
-
-
 
 // Mendaftarkan AppDbContext ke DI Container, supaya bisa "disuntikkan" (inject)
 // ke Service manapun yang butuh akses database.
@@ -91,16 +94,32 @@ builder.Services.AddAuthentication(options =>
 // Mengaktifkan sistem otorisasi (dipakai oleh atribut [Authorize] di Controller)
 builder.Services.AddAuthorization();
 
-// Mendaftarkan dukungan Controller (MVC-style routing, dipakai oleh semua file di folder Controllers/)
-builder.Services.AddControllers();
-
+// ===== Registrasi Service (Dependency Injection) =====
 // Mendaftarkan tiap pasangan interface+implementasi Service ke DI Container.
 // Artinya: kalau ada Controller yang minta IRoleService lewat constructor,
 // DI Container otomatis kasih instance RoleService.
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
-builder.Services.AddScoped<IAuthService, AuthService>();   // service untuk login & register JWT
+builder.Services.AddScoped<IAuthService, AuthService>();       // service untuk login & register JWT
 builder.Services.AddScoped<IAppSettingService, AppSettingService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(e => e.Value?.Errors.Count > 0)
+            .SelectMany(e => e.Value!.Errors.Select(err => err.ErrorMessage))
+            .ToList();
+
+        var message = errors.Count > 0 ? string.Join(" ", errors) : "Data tidak valid.";
+
+        return new BadRequestObjectResult(ApiResponse<object>.Fail(message));
+    };
+});
 
 
 
@@ -108,8 +127,10 @@ builder.Services.AddScoped<IAppSettingService, AppSettingService>();
 // Setelah baris ini, tidak bisa lagi menambah service baru ke builder.Services.
 var app = builder.Build();
 
-// untuk swagger
+// ===== Konfigurasi HTTP request pipeline =====
 
+// Aktifkan Swagger UI hanya di environment Development
+// (tidak di-expose saat aplikasi jalan di production).
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -119,14 +140,6 @@ if (app.Environment.IsDevelopment())
 // Middleware pertama dalam pipeline: menangkap semua exception dari middleware/Controller
 // di bawahnya, supaya error selalu balik sebagai JSON yang rapi, bukan stack trace mentah.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-// Configure the HTTP request pipeline.
-// Hanya aktifkan endpoint dokumentasi OpenAPI kalau environment-nya Development
-// (tidak di-expose saat aplikasi jalan di production).
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 // Redirect otomatis dari HTTP ke HTTPS
 app.UseHttpsRedirection();
@@ -143,33 +156,9 @@ app.UseAuthorization();
 // MenuController, AuthController, dst) sesuai atribut [Route] masing-masing.
 app.MapControllers();
 
-// ===== Kode bawaan template (boleh dihapus kapan saja, tidak dipakai) =====
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-// Contoh endpoint minimal API bawaan template .NET, di luar Controller.
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// untuk mengaktifkan akses ke file statis (misal: gambar, CSS, JS) di folder wwwroot.
+app.UseStaticFiles();
 
 // Menjalankan aplikasi, mulai "mendengarkan" request masuk di port yang sudah dikonfigurasi.
 app.Run();
-
-// Record bawaan template untuk bentuk data weather forecast di atas.
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

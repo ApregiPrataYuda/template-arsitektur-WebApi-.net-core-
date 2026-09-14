@@ -27,24 +27,24 @@ public static class PaginationExtensions
         };
     }
 
-    public static void SetPageUrls<T>(this PagedResult<T> result, HttpRequest request)
+   public static void SetPageUrls<T>(this PagedResult<T> result, HttpRequest request)
+{
+    var baseUrl = $"{request.Scheme}://{request.Host}{request.Path}";
+    var query = QueryHelpers.ParseQuery(request.QueryString.Value ?? string.Empty)
+        .ToDictionary(q => q.Key, q => (string?)q.Value.ToString());
+
+    if (result.HasNextPage)
     {
-        var baseUrl = $"{request.Scheme}://{request.Host}{request.Path}";
-        var query = QueryHelpers.ParseQuery(request.QueryString.Value ?? string.Empty)
-            .ToDictionary(q => q.Key, q => q.Value.ToString());
-
-        if (result.HasNextPage)
-        {
-            query["page"] = (result.PageNumber + 1).ToString();
-            query["pageSize"] = result.PageSize.ToString();
-            result.NextPageUrl = QueryHelpers.AddQueryString(baseUrl, query);
-        }
-
-        if (result.HasPreviousPage)
-        {
-            query["page"] = (result.PageNumber - 1).ToString();
-            query["pageSize"] = result.PageSize.ToString();
-            result.PreviousPageUrl = QueryHelpers.AddQueryString(baseUrl, query);
-        }
+        query["page"] = (result.PageNumber + 1).ToString();
+        query["pageSize"] = result.PageSize.ToString();
+        result.NextPageUrl = QueryHelpers.AddQueryString(baseUrl, query);
     }
+
+    if (result.HasPreviousPage)
+    {
+        query["page"] = (result.PageNumber - 1).ToString();
+        query["pageSize"] = result.PageSize.ToString();
+        result.PreviousPageUrl = QueryHelpers.AddQueryString(baseUrl, query);
+    }
+}
 }
