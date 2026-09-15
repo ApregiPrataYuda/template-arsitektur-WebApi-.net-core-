@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using appOne.Data;
@@ -11,9 +12,11 @@ using appOne.Data;
 namespace appOne.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915035339_AddAccessMenuTable")]
+    partial class AddAccessMenuTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,63 +64,6 @@ namespace appOne.Migrations
                         .HasDatabaseName("ix_ms_access_menu_id_role");
 
                     b.ToTable("ms_access_menu", (string)null);
-                });
-
-            modelBuilder.Entity("appOne.Models.AccessSubMenu", b =>
-                {
-                    b.Property<int>("IdAccessSubMenu")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id_access_sub_menu");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("IdAccessSubMenu"));
-
-                    b.Property<bool>("CanCreate")
-                        .HasColumnType("boolean")
-                        .HasColumnName("can_create");
-
-                    b.Property<bool>("CanDelete")
-                        .HasColumnType("boolean")
-                        .HasColumnName("can_delete");
-
-                    b.Property<bool>("CanUpdate")
-                        .HasColumnType("boolean")
-                        .HasColumnName("can_update");
-
-                    b.Property<bool>("CanView")
-                        .HasColumnType("boolean")
-                        .HasColumnName("can_view");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<int>("IdSubMenu")
-                        .HasColumnType("integer")
-                        .HasColumnName("id_sub_menu");
-
-                    b.Property<int>("IdUser")
-                        .HasColumnType("integer")
-                        .HasColumnName("id_user");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("IdAccessSubMenu")
-                        .HasName("pk_ms_access_submenu");
-
-                    b.HasIndex("IdSubMenu")
-                        .HasDatabaseName("ix_ms_access_submenu_id_sub_menu");
-
-                    b.HasIndex("IdUser")
-                        .HasDatabaseName("ix_ms_access_submenu_id_user");
-
-                    b.ToTable("ms_access_submenu", (string)null);
                 });
 
             modelBuilder.Entity("appOne.Models.AppSetting", b =>
@@ -453,27 +399,6 @@ namespace appOne.Migrations
                     b.Navigation("Menu");
 
                     b.Navigation("Role");
-                });
-
-            modelBuilder.Entity("appOne.Models.AccessSubMenu", b =>
-                {
-                    b.HasOne("appOne.Models.SubMenu", "SubMenu")
-                        .WithMany()
-                        .HasForeignKey("IdSubMenu")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_ms_access_submenu_ms_submenu_id_sub_menu");
-
-                    b.HasOne("appOne.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("IdUser")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_ms_access_submenu_ms_users_id_user");
-
-                    b.Navigation("SubMenu");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("appOne.Models.SubMenu", b =>

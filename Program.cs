@@ -26,7 +26,19 @@ builder.Services.AddEndpointsApiExplorer();
 
 // Mendaftarkan generator dokumentasi Swagger (menggantikan AddOpenApi() bawaan template,
 // karena project ini pakai Swagger, bukan OpenAPI minimal API bawaan .NET).
-builder.Services.AddSwaggerGen();
+// builder.Services.AddSwaggerGen();   //ini default bawaan template, diganti dengan AddSwaggerGen() versi custom di bawah.
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    {
+        Title = "App One API",
+        Version = "v1",
+        Description = "Dokumentasi API untuk aplikasi App One(versi .NET 10)",
+    });
+});
+
+
+
 
 // Mendaftarkan AppDbContext ke DI Container, supaya bisa "disuntikkan" (inject)
 // ke Service manapun yang butuh akses database.
@@ -103,6 +115,10 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IAuthService, AuthService>();       // service untuk login & register JWT
 builder.Services.AddScoped<IAppSettingService, AppSettingService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISubMenuService, SubMenuService>();
+builder.Services.AddScoped<IAccessMenuService, AccessMenuService>();
+builder.Services.AddScoped<IAccessSubMenuService, AccessSubMenuService>();
+
 
 
 
