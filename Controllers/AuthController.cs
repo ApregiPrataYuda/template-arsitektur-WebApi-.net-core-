@@ -25,11 +25,28 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken(RefreshTokenRequestDto dto)
+    {
+        var result = await _service.RefreshTokenAsync(dto.RefreshToken);
+        if (result == null) return Unauthorized(new { error = "Refresh token tidak valid atau sudah kadaluarsa." });
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(RefreshTokenRequestDto dto)
+    {
+        var success = await _service.RevokeRefreshTokenAsync(dto.RefreshToken);
+        return success
+            ? Ok(new { message = "Logout berhasil." })
+            : BadRequest(new { error = "Refresh token tidak ditemukan." });
+    }
+
     [Authorize]
     [HttpGet("profile")]
     public async Task<IActionResult> Profile()
     {
-        // Ambil id user dari klaim di dalam token JWT yang sudah divalidasi middleware
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userIdClaim == null || !int.TryParse(userIdClaim, out var userId))
             return Unauthorized();

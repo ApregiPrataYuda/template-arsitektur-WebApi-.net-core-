@@ -19,11 +19,12 @@ public class AuthResponseDto
 {
     public string Token { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
+    public string RefreshToken { get; set; } = string.Empty;      // ⬅️ tambahan baru
+    public DateTime RefreshTokenExpiresAt { get; set; }           // ⬅️ tambahan baru
     public string Username { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string? RoleName { get; set; }
 }
-
 
 public class ProfileResponseDto
 {
@@ -35,4 +36,10 @@ public class ProfileResponseDto
     public string? RoleName { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+// DTO baru untuk request refresh token
+public class RefreshTokenRequestDto
+{
+    public string RefreshToken { get; set; } = string.Empty;
 }

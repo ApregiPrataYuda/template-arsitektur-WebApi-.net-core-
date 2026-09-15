@@ -9,38 +9,23 @@ namespace appOne.Services;
 public class AppSettingService : IAppSettingService
 {
     private readonly AppDbContext _context;
+    private readonly IWebHostEnvironment _env;
 
-    public AppSettingService(AppDbContext context)
+    private static readonly string[] AllowedImageExtensions = { ".jpg", ".jpeg", ".png", ".webp", ".svg" };
+    private static readonly string[] AllowedFaviconExtensions = { ".ico", ".png", ".svg" };
+    private const long MaxImageSizeBytes = 2 * 1024 * 1024; // 2 MB
+
+    public AppSettingService(AppDbContext context, IWebHostEnvironment env)
     {
         _context = context;
+        _env = env;
     }
 
     public async Task<PagedResult<AppSettingResponseDto>> GetAllAsync(int page, int pageSize)
     {
         return await _context.AppSettings
             .OrderBy(a => a.Id)
-            .Select(a => new AppSettingResponseDto
-            {
-                Id = a.Id,
-                AppName = a.AppName,
-                AppShortName = a.AppShortName,
-                AppTagline = a.AppTagline,
-                AppLogo = a.AppLogo,
-                AppLogoSmall = a.AppLogoSmall,
-                Favicon = a.Favicon,
-                PrimaryColor = a.PrimaryColor,
-                SecondaryColor = a.SecondaryColor,
-                SidebarColor = a.SidebarColor,
-                NavbarColor = a.NavbarColor,
-                FooterText = a.FooterText,
-                FooterLicenseUrl = a.FooterLicenseUrl,
-                FooterDocumentationUrl = a.FooterDocumentationUrl,
-                FooterSupportUrl = a.FooterSupportUrl,
-                Version = a.Version,
-                Environment = a.Environment,
-                CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
-            })
+            .Select(a => MapToDto(a))
             .ToPagedResultAsync(page, pageSize);
     }
 
@@ -49,30 +34,7 @@ public class AppSettingService : IAppSettingService
         var appSetting = await _context.AppSettings
             .FirstOrDefaultAsync(a => a.Id == id);
 
-        if (appSetting == null) return null;
-
-        return new AppSettingResponseDto
-        {
-            Id = appSetting.Id,
-            AppName = appSetting.AppName,
-            AppShortName = appSetting.AppShortName,
-            AppTagline = appSetting.AppTagline,
-            AppLogo = appSetting.AppLogo,
-            AppLogoSmall = appSetting.AppLogoSmall,
-            Favicon = appSetting.Favicon,
-            PrimaryColor = appSetting.PrimaryColor,
-            SecondaryColor = appSetting.SecondaryColor,
-            SidebarColor = appSetting.SidebarColor,
-            NavbarColor = appSetting.NavbarColor,
-            FooterText = appSetting.FooterText,
-            FooterLicenseUrl = appSetting.FooterLicenseUrl,
-            FooterDocumentationUrl = appSetting.FooterDocumentationUrl,
-            FooterSupportUrl = appSetting.FooterSupportUrl,
-            Version = appSetting.Version,
-            Environment = appSetting.Environment,
-            CreatedAt = appSetting.CreatedAt,
-            UpdatedAt = appSetting.UpdatedAt
-        };
+        return appSetting == null ? null : MapToDto(appSetting);
     }
 
     public async Task<AppSettingResponseDto> CreateAsync(AppSettingCreateDto dto)
@@ -107,28 +69,7 @@ public class AppSettingService : IAppSettingService
         _context.AppSettings.Add(appSetting);
         await _context.SaveChangesAsync();
 
-        return new AppSettingResponseDto
-        {
-            Id = appSetting.Id,
-            AppName = appSetting.AppName,
-            AppShortName = appSetting.AppShortName,
-            AppTagline = appSetting.AppTagline,
-            AppLogo = appSetting.AppLogo,
-            AppLogoSmall = appSetting.AppLogoSmall,
-            Favicon = appSetting.Favicon,
-            PrimaryColor = appSetting.PrimaryColor,
-            SecondaryColor = appSetting.SecondaryColor,
-            SidebarColor = appSetting.SidebarColor,
-            NavbarColor = appSetting.NavbarColor,
-            FooterText = appSetting.FooterText,
-            FooterLicenseUrl = appSetting.FooterLicenseUrl,
-            FooterDocumentationUrl = appSetting.FooterDocumentationUrl,
-            FooterSupportUrl = appSetting.FooterSupportUrl,
-            Version = appSetting.Version,
-            Environment = appSetting.Environment,
-            CreatedAt = appSetting.CreatedAt,
-            UpdatedAt = appSetting.UpdatedAt
-        };
+        return MapToDto(appSetting);
     }
 
     public async Task<AppSettingResponseDto?> UpdateAsync(int id, AppSettingUpdateDto dto)
@@ -168,28 +109,7 @@ public class AppSettingService : IAppSettingService
         appSetting.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        return new AppSettingResponseDto
-        {
-            Id = appSetting.Id,
-            AppName = appSetting.AppName,
-            AppShortName = appSetting.AppShortName,
-            AppTagline = appSetting.AppTagline,
-            AppLogo = appSetting.AppLogo,
-            AppLogoSmall = appSetting.AppLogoSmall,
-            Favicon = appSetting.Favicon,
-            PrimaryColor = appSetting.PrimaryColor,
-            SecondaryColor = appSetting.SecondaryColor,
-            SidebarColor = appSetting.SidebarColor,
-            NavbarColor = appSetting.NavbarColor,
-            FooterText = appSetting.FooterText,
-            FooterLicenseUrl = appSetting.FooterLicenseUrl,
-            FooterDocumentationUrl = appSetting.FooterDocumentationUrl,
-            FooterSupportUrl = appSetting.FooterSupportUrl,
-            Version = appSetting.Version,
-            Environment = appSetting.Environment,
-            CreatedAt = appSetting.CreatedAt,
-            UpdatedAt = appSetting.UpdatedAt
-        };
+        return MapToDto(appSetting);
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -203,4 +123,86 @@ public class AppSettingService : IAppSettingService
         await _context.SaveChangesAsync();
         return true;
     }
+
+    public async Task<string?> UpdateLogoAsync(int id, IFormFile file)
+        => await UpdateImageFieldAsync(id, file, AllowedImageExtensions, "logo",
+            (setting) => setting.AppLogo,
+            (setting, path) => setting.AppLogo = path);
+
+    public async Task<string?> UpdateLogoSmallAsync(int id, IFormFile file)
+        => await UpdateImageFieldAsync(id, file, AllowedImageExtensions, "logo-small",
+            (setting) => setting.AppLogoSmall,
+            (setting, path) => setting.AppLogoSmall = path);
+
+    public async Task<string?> UpdateFaviconAsync(int id, IFormFile file)
+        => await UpdateImageFieldAsync(id, file, AllowedFaviconExtensions, "favicon",
+            (setting) => setting.Favicon,
+            (setting, path) => setting.Favicon = path);
+
+    private async Task<string?> UpdateImageFieldAsync(
+        int id,
+        IFormFile file,
+        string[] allowedExtensions,
+        string subFolder,
+        Func<AppSetting, string?> getCurrentPath,
+        Action<AppSetting, string> setNewPath)
+    {
+        var appSetting = await _context.AppSettings.FirstOrDefaultAsync(a => a.Id == id);
+        if (appSetting == null) return null;
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowedExtensions.Contains(ext))
+            throw new ValidationException($"Format file tidak didukung. Gunakan {string.Join(", ", allowedExtensions)}.");
+
+        if (file.Length > MaxImageSizeBytes)
+            throw new ValidationException("Ukuran file maksimal 2MB.");
+
+        var uploadsFolder = Path.Combine(_env.ContentRootPath, "wwwroot", "uploads", "appsettings", subFolder);
+        Directory.CreateDirectory(uploadsFolder);
+
+        var currentPath = getCurrentPath(appSetting);
+        if (!string.IsNullOrEmpty(currentPath))
+        {
+            var oldPath = Path.Combine(_env.ContentRootPath, "wwwroot", currentPath.TrimStart('/'));
+            if (File.Exists(oldPath)) File.Delete(oldPath);
+        }
+
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var relativePath = $"/uploads/appsettings/{subFolder}/{fileName}";
+        setNewPath(appSetting, relativePath);
+        appSetting.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return relativePath;
+    }
+
+    private static AppSettingResponseDto MapToDto(AppSetting a) => new()
+    {
+        Id = a.Id,
+        AppName = a.AppName,
+        AppShortName = a.AppShortName,
+        AppTagline = a.AppTagline,
+        AppLogo = a.AppLogo,
+        AppLogoSmall = a.AppLogoSmall,
+        Favicon = a.Favicon,
+        PrimaryColor = a.PrimaryColor,
+        SecondaryColor = a.SecondaryColor,
+        SidebarColor = a.SidebarColor,
+        NavbarColor = a.NavbarColor,
+        FooterText = a.FooterText,
+        FooterLicenseUrl = a.FooterLicenseUrl,
+        FooterDocumentationUrl = a.FooterDocumentationUrl,
+        FooterSupportUrl = a.FooterSupportUrl,
+        Version = a.Version,
+        Environment = a.Environment,
+        CreatedAt = a.CreatedAt,
+        UpdatedAt = a.UpdatedAt
+    };
 }

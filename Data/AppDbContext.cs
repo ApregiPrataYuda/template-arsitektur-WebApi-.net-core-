@@ -16,6 +16,8 @@ public class AppDbContext : DbContext
 
     public DbSet<AccessSubMenu> AccessSubMenus => Set<AccessSubMenu>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Role>()
@@ -51,6 +53,16 @@ public class AppDbContext : DbContext
             .HasOne(a => a.SubMenu)
             .WithMany()
             .HasForeignKey(a => a.IdSubMenu)
-            .OnDelete(DeleteBehavior.Restrict);    
+            .OnDelete(DeleteBehavior.Restrict); 
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(rt => rt.User)
+                .WithMany()
+                .HasForeignKey(rt => rt.IdUser)
+                .OnDelete(DeleteBehavior.Cascade); // kalau user dihapus, refresh token-nya ikut terhapus
+
+                modelBuilder.Entity<RefreshToken>()
+                    .HasIndex(rt => rt.Token)
+                    .IsUnique();   
     }
 }

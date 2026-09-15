@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -34,7 +35,7 @@ public class AuthService : IAuthService
         if (!user.IsActive) throw new UnauthorizedAccessException("Akun tidak aktif, hubungi administrator.");
         if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.Password)) return null;
 
-        return BuildResponse(user, user.Role?.RoleName);
+        return await BuildResponseAsync(user, user.Role?.RoleName);
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto dto)
@@ -64,10 +65,64 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
 
         var role = await _context.Roles.FindAsync(dto.RoleId);
-        return BuildResponse(user, role?.RoleName);
+        return await BuildResponseAsync(user, role?.RoleName);
     }
 
-    private AuthResponseDto BuildResponse(User user, string? roleName)
+    public async Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken)
+    {
+        var storedToken = await _context.RefreshTokens
+            .Include(rt => rt.User)
+            .ThenInclude(u => u.Role)
+            .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+
+        // Refresh token nggak ketemu, sudah di-revoke, atau sudah kadaluarsa
+        if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
+            return null;
+
+        if (!storedToken.User.IsActive)
+            throw new UnauthorizedAccessException("Akun tidak aktif, hubungi administrator.");
+
+        // Revoke refresh token lama (rotasi token, best practice keamanan)
+        storedToken.IsRevoked = true;
+        await _context.SaveChangesAsync();
+
+        return await BuildResponseAsync(storedToken.User, storedToken.User.Role?.RoleName);
+    }
+
+    public async Task<bool> RevokeRefreshTokenAsync(string refreshToken)
+    {
+        var storedToken = await _context.RefreshTokens
+            .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+
+        if (storedToken == null || storedToken.IsRevoked) return false;
+
+        storedToken.IsRevoked = true;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<ProfileResponseDto?> GetProfileAsync(int userId)
+    {
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.IdUser == userId && u.DeletedAt == null);
+
+        if (user == null) return null;
+
+        return new ProfileResponseDto
+        {
+            IdUser = user.IdUser,
+            FullName = user.FullName,
+            Username = user.Username,
+            Email = user.Email,
+            Image = user.Image,
+            RoleName = user.Role?.RoleName,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        };
+    }
+
+    private async Task<AuthResponseDto> BuildResponseAsync(User user, string? roleName)
     {
         var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes);
 
@@ -89,35 +144,39 @@ public class AuthService : IAuthService
             expires: expiresAt,
             signingCredentials: creds);
 
+        // Generate refresh token baru (random string yang aman)
+        var refreshTokenValue = GenerateSecureRandomToken();
+        var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays);
+
+        var refreshTokenEntity = new RefreshToken
+        {
+            IdUser = user.IdUser,
+            Token = refreshTokenValue,
+            ExpiresAt = refreshTokenExpiresAt,
+            IsRevoked = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.RefreshTokens.Add(refreshTokenEntity);
+        await _context.SaveChangesAsync();
+
         return new AuthResponseDto
         {
             Token = new JwtSecurityTokenHandler().WriteToken(token),
             ExpiresAt = expiresAt,
+            RefreshToken = refreshTokenValue,
+            RefreshTokenExpiresAt = refreshTokenExpiresAt,
             Username = user.Username,
             FullName = user.FullName,
             RoleName = roleName
         };
     }
 
-
-    public async Task<ProfileResponseDto?> GetProfileAsync(int userId)
-{
-    var user = await _context.Users
-        .Include(u => u.Role)
-        .FirstOrDefaultAsync(u => u.IdUser == userId && u.DeletedAt == null);
-
-    if (user == null) return null;
-
-    return new ProfileResponseDto
+    private static string GenerateSecureRandomToken()
     {
-        IdUser = user.IdUser,
-        FullName = user.FullName,
-        Username = user.Username,
-        Email = user.Email,
-        Image = user.Image,
-        RoleName = user.Role?.RoleName,
-        IsActive = user.IsActive,
-        CreatedAt = user.CreatedAt
-    };
-}
+        var randomBytes = new byte[64];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+        return Convert.ToBase64String(randomBytes);
+    }
 }

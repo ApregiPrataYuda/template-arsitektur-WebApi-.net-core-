@@ -59,4 +59,40 @@ public class AppSettingsController : BaseApiController
             ? SuccessResponse<object>(new { }, "App setting berhasil dihapus")
             : NotFoundResponse();
     }
+
+    [HttpPost("{id}/logo")]
+    public async Task<IActionResult> UploadLogo(int id, IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return FailResponse("File logo wajib diisi.");
+
+        var path = await _service.UpdateLogoAsync(id, file);
+        return path == null
+            ? NotFoundResponse()
+            : SuccessResponse(new { logo = path }, "Logo berhasil diupload");
+    }
+
+    [HttpPost("{id}/logo-small")]
+    public async Task<IActionResult> UploadLogoSmall(int id, IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return FailResponse("File logo kecil wajib diisi.");
+
+        var path = await _service.UpdateLogoSmallAsync(id, file);
+        return path == null
+            ? NotFoundResponse()
+            : SuccessResponse(new { logoSmall = path }, "Logo kecil berhasil diupload");
+    }
+
+    [HttpPost("{id}/favicon")]
+    public async Task<IActionResult> UploadFavicon(int id, IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return FailResponse("File favicon wajib diisi.");
+
+        var path = await _service.UpdateFaviconAsync(id, file);
+        return path == null
+            ? NotFoundResponse()
+            : SuccessResponse(new { favicon = path }, "Favicon berhasil diupload");
+    }
 }
